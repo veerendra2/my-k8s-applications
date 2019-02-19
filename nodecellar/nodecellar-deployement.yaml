@@ -1,0 +1,96 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nodecellar
+        tier: backend
+    spec:
+      containers:
+        - name: mongo
+          image: 'mongo:3.4'
+          imagePullPolicy: IfNotPresent
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 27017
+            - containerPort: 28017
+          command:
+            - mongod
+          args:
+            - '--rest'
+            - '--httpinterface'
+            - '--smallfiles'
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mangodb-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: nodecellar
+      port: 27017
+      protocol: TCP
+      targetPort: 27017
+  selector:
+    app: nodecellar
+    tier: backend
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nodecellar
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nodecellar
+        tier: frontend
+    spec:
+      containers:
+        - name: nodecellar
+          image: uric/nodecellar
+          imagePullPolicy: IfNotPresent
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODECELLAR_PORT
+              value: '8080'
+            - name: MONGO_PORT
+              value: '27017'
+            - name: MONGO_HOST
+              value: mangodb-service
+          command:
+            - nodejs
+          args:
+            - server.js
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodecellar-service
+spec:
+  type: NodePort
+  ports:
+    - name: nodecellar
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: nodecellar
+    tier: frontend

@@ -1,0 +1,48 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tomcat
+  namespace: default
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: tomcat
+    spec:
+      containers:
+      - name: tomcat
+        image: quay.io/veerendra2/tomcat:latest
+        command: ["sh","-c","/root/apache-tomcat-7.0.42-v2/bin/start.sh"]
+        imagePullPolicy: Always
+        ports:
+        - name: tomcat2
+          containerPort: 8080
+        resources:
+          requests:
+            cpu: 200m
+        volumeMounts:
+        - mountPath: /usr/local/tomcat
+          name: data
+      volumes:
+      - name: data
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat
+  namespace: default
+  labels:
+    name: tomcat
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+#  clusterIP: None
+#  type: NodePort
+  selector:
+    name: tomcat
